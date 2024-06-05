@@ -1,0 +1,212 @@
+services:
+# ------------- CONTROL TOWER -------------
+  control_tower_service:
+    container_name: control_tower_service
+    build:
+      context: https://github.com/aseca-power-ranger-rojo/control-tower-back.git
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - '${CONTROL_TOWER_SERVICE_PORT}:${CONTROL_TOWER_SERVICE_PORT}'
+    environment:
+      - PORT=${CONTROL_TOWER_SERVICE_PORT}
+      - DATABASE_URL=${CONTROL_TOWER_SERVICE_DATABASE_URL}
+      - PICKING_SERVICE_URL=${PICKING_SERVICE_URL}
+      - DELIVERY_SERVICE_URL=${DELIVERY_SERVICE_URL}
+    depends_on:
+      db_control_tower_service:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  db_control_tower_service:
+    image: postgres:alpine
+    container_name: db_control_tower_service
+    restart: always
+    environment:
+      - POSTGRES_DB=${CONTROL_TOWER_POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    ports:
+      - '${CONTROL_TOWER_SERVICE_DB_PORT}:5432'
+    volumes:
+      - db_control_tower:/var/lib/postgresql/data
+    env_file:
+      - .env
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 5s
+      timeout: 10s
+      retries: 5
+    networks:
+      - app-network
+  
+# ------------- DELIVERY SERVICE -------------
+  delivery_service:
+    container_name: delivery_service
+    build:
+      context: https://github.com/aseca-power-ranger-rojo/delivery-service.git
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - '${DELIVERY_SERVICE_PORT}:${DELIVERY_SERVICE_PORT}'
+    environment:
+      - PORT=${DELIVERY_SERVICE_PORT}
+      - DATABASE_URL=${DELIVERY_DATABASE_URL}
+      - CONTROL_TOWER_URL=${CONTROL_TOWER_URL}
+    depends_on:
+      db_delivery_service:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  db_delivery_service:
+    image: postgres:alpine
+    container_name: db_delivery_service
+    restart: always
+    environment:
+      - POSTGRES_DB=${DELIVERY_POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    ports:
+      - '${DELIVERY_SERVICE_DB_PORT}:5432'
+    volumes:
+      - db_delivery_service:/var/lib/postgresql/data
+    env_file:
+      - .env
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 1s
+      timeout: 1s
+      retries: 15
+    networks:
+      - app-network
+
+# ------------- PICKING SERVICE -------------
+  picking_service:
+    container_name: picking_service
+    build:
+      context: https://github.com/aseca-power-ranger-rojo/picking-service.git
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - '${PICKING_SERVICE_PORT}:${PICKING_SERVICE_PORT}'
+    environment:
+      - PORT=${PICKING_SERVICE_PORT}
+      - DATABASE_URL=${PICKING_DATABASE_URL}
+      - CONTROL_TOWER_URL=${CONTROL_TOWER_URL}
+    depends_on:
+      db_picking_service:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  db_picking_service:
+    image: postgres:alpine
+    container_name: db_picking_service
+    restart: always
+    environment:
+      - POSTGRES_DB=${PICKING_POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    ports:
+      - '${PICKING_SERVICE_DB_PORT}:5432'
+    volumes:
+      - db_picking_service:/var/lib/postgresql/data
+    env_file:
+      - .env
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 1s
+      timeout: 1s
+      retries: 15
+    networks:
+      - app-network
+
+# ------------- STORE SERVICE -------------
+  store_service:
+    container_name: store_service
+    build:
+      context: https://github.com/aseca-power-ranger-rojo/store-service.git
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - '${STORE_SERVICE_PORT}:${STORE_SERVICE_PORT}'
+    environment:
+      - PORT=${STORE_SERVICE_PORT}
+      - DATABASE_URL=${STORE_DATABASE_URL}
+      - CONTROL_TOWER_URL=${CONTROL_TOWER_URL}
+    depends_on:
+      db_store_service:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  db_store_service:
+    image: postgres:alpine
+    container_name: db_store_service
+    restart: always
+    environment:
+      - POSTGRES_DB=${STORE_POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    ports:
+      - '${DB_PORT}:5432'
+    volumes:
+      - db_store_service:/var/lib/postgresql/data
+    env_file:
+      - .env
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 1s
+      timeout: 1s
+      retries: 15
+    networks:
+      - app-network
+
+# ------------- DELIVERY FRONT -------------
+  delivery-front:
+    container_name: delivery-front
+    build:
+      context: https://github.com/aseca-power-ranger-rojo/delivery-front.git
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - '8081:8081'
+    env_file:
+      - .env
+
+# ------------- PICKING FRONT -------------
+  picking-front:
+    container_name: picking-front
+    build:
+      context: https://github.com/aseca-power-ranger-rojo/picking-front.git
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - '3006:3006'
+    environment:
+      - REACT_APP_API_URL=${PICKING_REACT_APP_API_URL}
+
+# ------------- STORE FRONT -------------
+  store-front:
+    container_name: store-front
+    build:
+      context: https://github.com/aseca-power-ranger-rojo/store-front.git
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - '3007:3007'
+    environment:
+      - REACT_APP_API_URL=${STORE_REACT_APP_API_URL}
+      
+
+volumes:
+  db_control_tower:
+  db_delivery_service:
+  db_picking_service:
+  db_store_service:
+
+networks:
+  app-network:
+    external: true
