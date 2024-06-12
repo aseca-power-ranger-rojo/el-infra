@@ -176,6 +176,18 @@ services:
     env_file:
       - .env
 
+  # ------------- CONTROL TOWER FRONT -------------
+  control-tower-front:
+    container_name: control-tower-front
+    build:
+      context: https://github.com/aseca-power-ranger-rojo/control-tower-front.git
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - '8082:8082'
+    env_file:
+      - .env
+
 # ------------- PICKING FRONT -------------
   picking-front:
     container_name: picking-front
